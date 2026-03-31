@@ -1,4 +1,4 @@
-from flask import Flask, jsonify, request
+from flask import Flask, jsonify, request, render_template
 import os
 import redis
 import psycopg2
@@ -38,6 +38,10 @@ def init_db():
     conn.commit()
     cur.close()
     conn.close()
+
+@app.route("/")
+def index():
+    return render_template("index.html")
 
 @app.route("/health")
 def health():
