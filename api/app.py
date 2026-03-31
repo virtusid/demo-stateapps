@@ -39,6 +39,10 @@ def init_db():
     cur.close()
     conn.close()
 
+# Init DB on startup (works with gunicorn too)
+with app.app_context():
+    init_db()
+
 @app.route("/")
 def index():
     return render_template("index.html")
@@ -104,5 +108,4 @@ def delete_note(note_id):
     return jsonify({"deleted": note_id})
 
 if __name__ == "__main__":
-    init_db()
     app.run(host="0.0.0.0", port=int(os.getenv("PORT", 8081)))
