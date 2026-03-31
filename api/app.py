@@ -1,4 +1,4 @@
-from flask import Flask, jsonify, request, render_template
+from flask import Flask, jsonify, request
 import os
 import redis
 import psycopg2
@@ -7,7 +7,6 @@ import socket
 
 app = Flask(__name__)
 
-# Redis connection
 def get_redis():
     return redis.Redis(
         host=os.getenv("REDIS_HOST", "redis"),
@@ -15,7 +14,6 @@ def get_redis():
         decode_responses=True
     )
 
-# PostgreSQL connection
 def get_db():
     return psycopg2.connect(
         host=os.getenv("DB_HOST", "postgres"),
@@ -39,13 +37,8 @@ def init_db():
     cur.close()
     conn.close()
 
-# Init DB on startup (works with gunicorn too)
 with app.app_context():
     init_db()
-
-@app.route("/")
-def index():
-    return render_template("index.html")
 
 @app.route("/health")
 def health():
