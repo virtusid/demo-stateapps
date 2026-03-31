@@ -1,0 +1,6 @@
+#!/bin/bash
+set -e
+
+echo "---> Starting API..."
+cd /tmp/src
+exec gunicorn --bind 0.0.0.0:8081 --workers 2 app:app

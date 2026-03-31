@@ -1,0 +1,205 @@
+---
+# ImageStream for API
+apiVersion: image.openshift.io/v1
+kind: ImageStream
+metadata:
+  name: demo-api
+  namespace: demo-project
+spec:
+  lookupPolicy:
+    local: true
+
+---
+# BuildConfig for API (S2I)
+apiVersion: build.openshift.io/v1
+kind: BuildConfig
+metadata:
+  name: demo-api
+  namespace: demo-project
+spec:
+  source:
+    type: Git
+    git:
+      uri: https://github.com/virtusid/demo-stateapps.git
+      ref: main
+    contextDir: api
+  strategy:
+    type: Source
+    sourceStrategy:
+      from:
+        kind: ImageStreamTag
+        namespace: openshift
+        name: python:3.11-ubi9
+  output:
+    to:
+      kind: ImageStreamTag
+      name: demo-api:latest
+  triggers:
+    - type: ConfigChange
+    - type: ImageChange
+
+---
+# DeploymentConfig for API
+apiVersion: apps.openshift.io/v1
+kind: DeploymentConfig
+metadata:
+  name: demo-api
+  namespace: demo-project
+spec:
+  replicas: 2
+  selector:
+    app: demo-api
+  triggers:
+    - type: ImageChange
+      imageChangeParams:
+        automatic: true
+        containerNames:
+          - demo-api
+        from:
+          kind: ImageStreamTag
+          name: demo-api:latest
+    - type: ConfigChange
+  template:
+    metadata:
+      labels:
+        app: demo-api
+    spec:
+      containers:
+        - name: demo-api
+          image: " "
+          ports:
+            - containerPort: 8080
+          env:
+            - name: DB_HOST
+              value: postgres
+            - name: DB_NAME
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-secret
+                  key: POSTGRES_DB
+            - name: DB_USER
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-secret
+                  key: POSTGRES_USER
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-secret
+                  key: POSTGRES_PASSWORD
+            - name: REDIS_HOST
+              value: redis
+
+---
+# Service for API
+apiVersion: v1
+kind: Service
+metadata:
+  name: api
+  namespace: demo-project
+spec:
+  selector:
+    app: demo-api
+  ports:
+    - port: 8080
+      targetPort: 8080
+
+---
+# ImageStream for Frontend
+apiVersion: image.openshift.io/v1
+kind: ImageStream
+metadata:
+  name: demo-frontend
+  namespace: demo-project
+spec:
+  lookupPolicy:
+    local: true
+
+---
+# BuildConfig for Frontend (Docker)
+apiVersion: build.openshift.io/v1
+kind: BuildConfig
+metadata:
+  name: demo-frontend
+  namespace: demo-project
+spec:
+  source:
+    type: Git
+    git:
+      uri: https://github.com/virtusid/demo-stateapps.git
+      ref: main
+    contextDir: frontend
+  strategy:
+    type: Docker
+    dockerStrategy:
+      dockerfilePath: Dockerfile
+  output:
+    to:
+      kind: ImageStreamTag
+      name: demo-frontend:latest
+  triggers:
+    - type: ConfigChange
+    - type: ImageChange
+
+---
+# DeploymentConfig for Frontend
+apiVersion: apps.openshift.io/v1
+kind: DeploymentConfig
+metadata:
+  name: demo-frontend
+  namespace: demo-project
+spec:
+  replicas: 2
+  selector:
+    app: demo-frontend
+  triggers:
+    - type: ImageChange
+      imageChangeParams:
+        automatic: true
+        containerNames:
+          - demo-frontend
+        from:
+          kind: ImageStreamTag
+          name: demo-frontend:latest
+    - type: ConfigChange
+  template:
+    metadata:
+      labels:
+        app: demo-frontend
+    spec:
+      containers:
+        - name: demo-frontend
+          image: " "
+          ports:
+            - containerPort: 8080
+
+---
+# Service for Frontend
+apiVersion: v1
+kind: Service
+metadata:
+  name: demo-frontend
+  namespace: demo-project
+spec:
+  selector:
+    app: demo-frontend
+  ports:
+    - port: 8080
+      targetPort: 8080
+
+---
+# Route - expose frontend ke luar
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: demo-frontend
+  namespace: demo-project
+spec:
+  to:
+    kind: Service
+    name: demo-frontend
+  port:
+    targetPort: 8080
+  tls:
+    termination: edge
+    insecureEdgeTerminationPolicy: Redirect
