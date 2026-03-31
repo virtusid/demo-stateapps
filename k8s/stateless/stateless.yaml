@@ -19,7 +19,7 @@ spec:
   source:
     type: Git
     git:
-      uri: https://github.com/your-org/demo-stateful.git
+      uri: https://github.com/virtusid/demo-stateapps.git
       ref: main
     contextDir: api
   strategy:
